@@ -1,15 +1,26 @@
 require('dotenv').config();
-const { 
-  Client, 
-  GatewayIntentBits, 
-  REST, 
-  Routes, 
+
+const {
+  Client,
+  GatewayIntentBits,
+  REST,
+  Routes,
   SlashCommandBuilder,
-  PermissionsBitField 
+  PermissionsBitField
 } = require('discord.js');
 
 const express = require("express");
+const mongoose = require("mongoose");
+
 const app = express();
+
+/* ---------------- MONGODB CONNECTION ---------------- */
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => console.error("MongoDB Error:", err));
+
+/* ---------------- DISCORD CLIENT ---------------- */
 
 const client = new Client({
   intents: [
@@ -44,7 +55,7 @@ const commands = [
     )
 ].map(command => command.toJSON());
 
-/* ------------- REGISTER COMMANDS TO YOUR SERVER ------------- */
+/* ---------------- REGISTER COMMANDS ---------------- */
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
@@ -66,13 +77,13 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
   }
 })();
 
-/* ------------- BOT READY ------------- */
+/* ---------------- BOT READY ---------------- */
 
 client.once('clientReady', () => {
   console.log(`Bot is online as ${client.user.tag}`);
 });
 
-/* ------------- COMMAND HANDLER ------------- */
+/* ---------------- COMMAND HANDLER ---------------- */
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
@@ -99,27 +110,35 @@ client.on('interactionCreate', async interaction => {
   if (interaction.commandName === 'clear') {
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-      return interaction.reply({ 
+      return interaction.reply({
         content: '❌ You need Manage Messages permission.',
-        ephemeral: true 
+        ephemeral: true
       });
     }
 
     const amount = interaction.options.getInteger('amount');
 
+    if (amount > 100) {
+      return interaction.reply({
+        content: "❌ You can only delete up to 100 messages at once.",
+        ephemeral: true
+      });
+    }
+
     await interaction.channel.bulkDelete(amount, true);
-    await interaction.reply({ 
+
+    await interaction.reply({
       content: `✅ Deleted ${amount} messages.`,
-      ephemeral: true 
+      ephemeral: true
     });
   }
 });
 
-/* ------------- LOGIN ------------- */
+/* ---------------- LOGIN ---------------- */
 
 client.login(process.env.TOKEN);
 
-/* ------------- EXPRESS SERVER ------------- */
+/* ---------------- EXPRESS SERVER ---------------- */
 
 app.get("/", (req, res) => {
   res.send("Bot is running!");
