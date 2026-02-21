@@ -1,23 +1,17 @@
 {
-  "name": "devforgebot",
+  "name": "devforge-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "DevForge Discord Bot",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "keywords": [],
-  "author": "",
+  "author": "DevForge",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "discord.js": "^14.25.1",
+    "discord.js": "^14.14.1",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-<<<<<<< HEAD
-    "mongoose": "^9.2.1",
-=======
->>>>>>> 960bfef601fcc9875e42ebedfbbbf0729ed5ec98
-    "node-cron": "^4.2.1"
+    "express": "^4.18.2",
+    "mongoose": "^8.3.1"
   }
 }
