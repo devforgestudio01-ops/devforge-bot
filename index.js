@@ -1,31 +1,125 @@
-const { Client, GatewayIntentBits } = require('discord.js');
-const cron = require('node-cron');
+require('dotenv').config();
+const { 
+  Client, 
+  GatewayIntentBits, 
+  REST, 
+  Routes, 
+  SlashCommandBuilder,
+  PermissionsBitField 
+} = require('discord.js');
+
+const express = require("express");
+const app = express();
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent
   ]
 });
 
-client.once('ready', () => {
+/* ---------------- SLASH COMMANDS ---------------- */
+
+const commands = [
+  new SlashCommandBuilder()
+    .setName('ping')
+    .setDescription('Check bot latency'),
+
+  new SlashCommandBuilder()
+    .setName('help')
+    .setDescription('Show all commands'),
+
+  new SlashCommandBuilder()
+    .setName('github')
+    .setDescription('Show GitHub link'),
+
+  new SlashCommandBuilder()
+    .setName('clear')
+    .setDescription('Delete messages (Moderator only)')
+    .addIntegerOption(option =>
+      option.setName('amount')
+        .setDescription('Number of messages to delete')
+        .setRequired(true)
+    )
+].map(command => command.toJSON());
+
+/* ------------- REGISTER COMMANDS TO YOUR SERVER ------------- */
+
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+
+(async () => {
+  try {
+    console.log('Registering slash commands...');
+
+    await rest.put(
+      Routes.applicationGuildCommands(
+        process.env.CLIENT_ID,
+        process.env.GUILD_ID
+      ),
+      { body: commands }
+    );
+
+    console.log('Slash commands registered successfully.');
+  } catch (error) {
+    console.error(error);
+  }
+})();
+
+/* ------------- BOT READY ------------- */
+
+client.once('clientReady', () => {
   console.log(`Bot is online as ${client.user.tag}`);
 });
 
-client.on('guildMemberAdd', member => {
-  const channel = member.guild.channels.cache.find(c => c.name === 'welcome');
-  if (channel) {
-    channel.send(`🔥 Welcome to DevForge Studio, ${member}!`);
+/* ------------- COMMAND HANDLER ------------- */
+
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === 'ping') {
+    await interaction.reply(`🏓 Pong! ${client.ws.ping}ms`);
+  }
+
+  if (interaction.commandName === 'help') {
+    await interaction.reply(`
+📌 **DevForge Commands**
+
+/ping - Check latency  
+/help - Show commands  
+/github - GitHub link  
+/clear - Delete messages (mod only)
+`);
+  }
+
+  if (interaction.commandName === 'github') {
+    await interaction.reply('🔗 https://github.com/your-github-link');
+  }
+
+  if (interaction.commandName === 'clear') {
+
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+      return interaction.reply({ 
+        content: '❌ You need Manage Messages permission.',
+        ephemeral: true 
+      });
+    }
+
+    const amount = interaction.options.getInteger('amount');
+
+    await interaction.channel.bulkDelete(amount, true);
+    await interaction.reply({ 
+      content: `✅ Deleted ${amount} messages.`,
+      ephemeral: true 
+    });
   }
 });
 
+/* ------------- LOGIN ------------- */
 
 client.login(process.env.TOKEN);
 
-const express = require("express");
-const app = express();
+/* ------------- EXPRESS SERVER ------------- */
 
 app.get("/", (req, res) => {
   res.send("Bot is running!");
